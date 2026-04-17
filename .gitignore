@@ -1,0 +1,51 @@
+# ── Secrets — NEVER commit these ─────────────────────────────────────────────
+.env
+*.session
+*.session-journal
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.installed.cfg
+*.manifest
+
+# ── Virtual environment ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Bot runtime ───────────────────────────────────────────────────────────────
+cache/
+logs/
+downloads/
+*.mp3
+*.mp4
+*.webm
+*.m4a
+*.opus
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/

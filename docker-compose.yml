@@ -1,0 +1,112 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# docker-compose.yml — Full stack: Bot + MongoDB + Redis
+#
+# Usage:
+#   cp .env.example .env && nano .env   # fill in your secrets
+#   docker compose up -d                # start all services
+#   docker compose logs -f bot          # follow bot logs
+#   docker compose down                 # stop all services
+# ══════════════════════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+  bot_cache:
+    driver: local
+  bot_logs:
+    driver: local
+
+# ── Shared network ────────────────────────────────────────────────────────────
+networks:
+  musicbot_net:
+    driver: bridge
+
+services:
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: musicbot_mongo
+    restart: unless-stopped
+    networks:
+      - musicbot_net
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: musicbot
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    # Expose on localhost only (not publicly)
+    ports:
+      - "127.0.0.1:27017:27017"
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: musicbot_redis
+    restart: unless-stopped
+    networks:
+      - musicbot_net
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --save 60 1
+        --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # ── Music Bot ────────────────────────────────────────────────────────────────
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: musicbot:latest
+    container_name: musicbot
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - musicbot_net
+    volumes:
+      - bot_cache:/app/cache
+      - bot_logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      # Override DB/Redis URLs so the bot connects to the Docker services,
+      # not to localhost (which would resolve to the bot container itself).
+      DB_URI: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8080:8080"    # dashboard (only if DASHBOARD_ENABLED=true)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Allow the container to use more open file descriptors (needed for ffmpeg)
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536

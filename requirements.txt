@@ -1,0 +1,54 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# requirements.txt — Telegram Voice Chat Music Bot
+# Python 3.10+
+# Install: pip install -r requirements.txt
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Telegram framework ────────────────────────────────────────────────────────
+pyrogram==2.0.106
+TgCrypto==1.2.5              # C-extension: speed-up for Pyrogram encryption
+
+# ── Voice chat streaming ──────────────────────────────────────────────────────
+# py-tgcalls is the maintained PyTgCalls fork (as of 2024-2025)
+py-tgcalls==0.9.6.1
+
+# ── Media extraction ──────────────────────────────────────────────────────────
+yt-dlp>=2024.3.10            # actively maintained youtube-dl fork
+
+# ── Database drivers ──────────────────────────────────────────────────────────
+motor==3.4.0                 # async MongoDB driver
+pymongo==4.7.2               # sync MongoDB (used by motor internally)
+aioredis==2.0.1              # async Redis client
+
+# ── HTTP client ───────────────────────────────────────────────────────────────
+httpx[http2]==0.27.0         # async HTTP with HTTP/2 support
+
+# ── Image generation (Now Playing card) ──────────────────────────────────────
+Pillow==10.3.0
+
+# ── Environment & config ──────────────────────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+rich==13.7.1                 # coloured terminal output
+
+# ── Web dashboard (optional — needed only when DASHBOARD_ENABLED=true) ────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+jinja2==3.1.4                # HTML templates
+python-multipart==0.0.9      # form parsing for FastAPI
+
+# ── Pydantic (used by FastAPI) ────────────────────────────────────────────────
+pydantic==2.7.1
+
+# ── Spotify API authentication ────────────────────────────────────────────────
+# No extra dep needed — we use httpx + base64 (stdlib)
+
+# ── Audio processing ──────────────────────────────────────────────────────────
+# ffmpeg must be installed at the OS level (see README).
+# The Python bindings below are optional quality-of-life wrappers:
+ffmpeg-python==0.2.0
+
+# ── Utility ───────────────────────────────────────────────────────────────────
+aiofiles==23.2.1             # async file I/O helper
+async-timeout==4.0.3         # asyncio timeout helper (backport for Python < 3.11)

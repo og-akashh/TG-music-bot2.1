@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ bot_name }} — Dashboard</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d1a;
+      --surface:   #14142b;
+      --card:      #1a1a35;
+      --border:    #2a2a55;
+      --accent:    #6c63ff;
+      --accent2:   #a78bfa;
+      --text:      #e2e2f0;
+      --muted:     #7b7ba8;
+      --danger:    #ff4d6d;
+      --success:   #10b981;
+      --warn:      #f59e0b;
+      --radius:    12px;
+      --shadow:    0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+      margin-right: 6px;
+      transition: background 0.3s;
+    }
+    #status-dot.online  { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    #status-dot.offline { background: var(--danger);  box-shadow: 0 0 8px var(--danger);  }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    /* ── Auth form ─────────────────────────────────────────────────────── */
+    #auth-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    #auth-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      width: min(400px, 90vw);
+      text-align: center;
+    }
+    #auth-box h2 { font-size: 1.2rem; margin-bottom: 1.2rem; color: var(--accent2); }
+    #auth-box input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      margin-bottom: 1rem;
+    }
+    #auth-box input:focus { border-color: var(--accent); }
+    #auth-error { color: var(--danger); font-size: 0.85rem; min-height: 1.2em; margin-bottom: 0.5rem; }
+
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.55rem 1.1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary { background: var(--accent);  color: #fff; }
+    .btn-danger  { background: var(--danger);  color: #fff; }
+    .btn-warn    { background: var(--warn);    color: #000; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-ghost   { background: var(--border);  color: var(--text); }
+
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+
+    /* ── Stats grid ─────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .stat-item {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+
+    .stat-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+    .stat-value { font-size: 1.3rem; font-weight: 700; color: var(--accent2); }
+
+    /* ── Now playing card ───────────────────────────────────────────────── */
+    #np-title    { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.3rem; }
+    #np-artist   { font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem; }
+    #np-duration { font-size: 0.85rem; color: var(--muted); }
+    #np-empty    { color: var(--muted); font-style: italic; }
+
+    /* ── Controls ────────────────────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 1rem;
+    }
+
+    /* ── Volume slider ──────────────────────────────────────────────────── */
+    .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+    input[type=range] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+    #vol-label { min-width: 44px; text-align: right; font-weight: 600; }
+
+    /* ── Chat ID input ──────────────────────────────────────────────────── */
+    .chat-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+    .chat-row input {
+      flex: 1;
+      padding: 0.55rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .chat-row input:focus { border-color: var(--accent); }
+
+    /* ── Queue list ─────────────────────────────────────────────────────── */
+    #queue-list {
+      list-style: none;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    #queue-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--border);
+    }
+    #queue-list li:last-child { border-bottom: none; }
+    #queue-list li:nth-child(odd) { background: rgba(255,255,255,0.02); }
+    .q-pos   { color: var(--muted); min-width: 24px; }
+    .q-title { flex: 1; padding: 0 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .q-dur   { color: var(--muted); font-size: 0.8rem; }
+
+    /* ── Log area ────────────────────────────────────────────────────────── */
+    #log-area {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      max-height: 150px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    .log-ok  { color: var(--success); }
+    .log-err { color: var(--danger);  }
+    .log-inf { color: var(--accent2); }
+
+    /* ── Spinner ─────────────────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      main { grid-template-columns: 1fr; padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Auth overlay -->
+<div id="auth-overlay">
+  <div id="auth-box">
+    <h2>🔐 Dashboard Login</h2>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.2rem;">
+      Enter your <code>DASHBOARD_SECRET</code> to access the control panel.
+    </p>
+    <input type="password" id="token-input" placeholder="Bearer token…" autocomplete="current-password" />
+    <div id="auth-error"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Login</button>
+  </div>
+</div>
+
+<header>
+  <h1>🎵 {{ bot_name }} Dashboard</h1>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span><span id="status-dot"></span><span id="status-text" style="font-size:0.85rem;color:var(--muted)">Connecting…</span></span>
+    <button class="btn btn-ghost" style="font-size:0.8rem" onclick="refreshAll()">⟳ Refresh</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Stats card ─────────────────────────────────────────────────── -->
+  <div class="card" style="grid-column: 1 / -1">
+    <h2>📊 Global Statistics</h2>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-item"><div class="stat-label">Users</div><div class="stat-value" id="s-users">—</div></div>
+      <div class="stat-item"><div class="stat-label">Chats</div><div class="stat-value" id="s-chats">—</div></div>
+      <div class="stat-item"><div class="stat-label">Playlists</div><div class="stat-value" id="s-playlists">—</div></div>
+      <div class="stat-item"><div class="stat-label">History rows</div><div class="stat-value" id="s-history">—</div></div>
+      <div class="stat-item"><div class="stat-label">Cache files</div><div class="stat-value" id="s-cache-files">—</div></div>
+      <div class="stat-item"><div class="stat-label">Cache size</div><div class="stat-value" id="s-cache-size">—</div></div>
+      <div class="stat-item"><div class="stat-label">Uptime</div><div class="stat-value" id="s-uptime" style="font-size:1rem">—</div></div>
+      <div class="stat-item"><div class="stat-label">Cache usage</div><div class="stat-value" id="s-cache-pct">—</div></div>
+    </div>
+  </div>
+
+  <!-- ── Chat selector + Now Playing ──────────────────────────────── -->
+  <div class="card">
+    <h2>🎵 Now Playing</h2>
+    <div class="chat-row">
+      <input type="number" id="chat-id-input" placeholder="Chat ID (e.g. -1001234567890)" />
+      <button class="btn btn-primary" onclick="loadChatData()">Load</button>
+    </div>
+    <div id="np-empty" style="color:var(--muted);font-style:italic">Enter a chat ID above.</div>
+    <div id="np-info" style="display:none">
+      <div id="np-title">—</div>
+      <div id="np-artist">—</div>
+      <div id="np-duration"></div>
+      <div class="controls">
+        <button class="btn btn-warn"    onclick="apiAction('pause')">⏸ Pause</button>
+        <button class="btn btn-success" onclick="apiAction('resume')">▶️ Resume</button>
+        <button class="btn btn-ghost"   onclick="apiAction('skip')">⏭ Skip</button>
+        <button class="btn btn-danger"  onclick="apiAction('stop')">⏹ Stop</button>
+      </div>
+      <div class="volume-row">
+        <span style="font-size:0.85rem;color:var(--muted)">🔊 Vol</span>
+        <input type="range" id="vol-slider" min="1" max="200" value="100"
+               oninput="updateVolLabel(this.value)"
+               onchange="setVolume(this.value)" />
+        <span id="vol-label">100%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Queue card ───────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>📋 Queue</h2>
+    <div id="queue-empty" style="color:var(--muted);font-style:italic">No chat loaded.</div>
+    <ul id="queue-list" style="display:none"></ul>
+  </div>
+
+  <!-- ── Activity log ─────────────────────────────────────────────── -->
+  <div class="card" style="grid-column: 1 / -1">
+    <h2>🖥 Activity Log</h2>
+    <div id="log-area"></div>
+  </div>
+
+</main>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────────── */
+let _token   = '';
+let _chatId  = null;
+let _pollInterval = null;
+
+/* ── Auth ──────────────────────────────────────────────────────────── */
+async function doLogin() {
+  const input = document.getElementById('token-input');
+  _token = input.value.trim();
+  if (!_token) { showAuthError('Token cannot be empty.'); return; }
+
+  // Verify by hitting /api/stats
+  try {
+    const res = await fetch('/api/stats', { headers: authHeaders() });
+    if (!res.ok) { showAuthError('Invalid token. Try again.'); _token = ''; return; }
+    document.getElementById('auth-overlay').style.display = 'none';
+    logMsg('Logged in successfully.', 'ok');
+    refreshAll();
+    _pollInterval = setInterval(refreshAll, 15000);
+  } catch (e) {
+    showAuthError('Connection error: ' + e.message);
+    _token = '';
+  }
+}
+
+function showAuthError(msg) {
+  document.getElementById('auth-error').textContent = msg;
+}
+
+function authHeaders() {
+  return { 'Authorization': 'Bearer ' + _token, 'Content-Type': 'application/json' };
+}
+
+document.getElementById('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+/* ── Helpers ───────────────────────────────────────────────────────── */
+function logMsg(text, type = 'inf') {
+  const el = document.getElementById('log-area');
+  const ts  = new Date().toLocaleTimeString();
+  const cls = { ok: 'log-ok', err: 'log-err', inf: 'log-inf' }[type] || 'log-inf';
+  el.innerHTML += `<div class="${cls}">[${ts}] ${text}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function fmtDuration(secs) {
+  if (!secs) return '—';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function setStatus(online) {
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  dot.className  = online ? 'online' : 'offline';
+  text.textContent = online ? 'Online' : 'Offline';
+}
+
+/* ── Stats refresh ──────────────────────────────────────────────────── */
+async function refreshStats() {
+  try {
+    const res  = await fetch('/api/stats', { headers: authHeaders() });
+    if (!res.ok) { setStatus(false); return; }
+    const data = await res.json();
+    setStatus(true);
+    document.getElementById('s-users').textContent      = data.database?.users       ?? '—';
+    document.getElementById('s-chats').textContent      = data.database?.chats       ?? '—';
+    document.getElementById('s-playlists').textContent  = data.database?.playlists   ?? '—';
+    document.getElementById('s-history').textContent    = data.database?.history_entries ?? '—';
+    document.getElementById('s-cache-files').textContent = data.cache?.file_count    ?? '—';
+    document.getElementById('s-cache-size').textContent  = (data.cache?.total_mb ?? '—') + ' MB';
+    document.getElementById('s-cache-pct').textContent   = (data.cache?.usage_percent ?? '—') + '%';
+    document.getElementById('s-uptime').textContent      = data.uptime ?? '—';
+  } catch (e) {
+    setStatus(false);
+    logMsg('Stats fetch error: ' + e.message, 'err');
+  }
+}
+
+/* ── Chat queue + NP refresh ────────────────────────────────────────── */
+async function loadChatData() {
+  const raw = document.getElementById('chat-id-input').value.trim();
+  if (!raw) { logMsg('Enter a chat ID first.', 'err'); return; }
+  _chatId = parseInt(raw);
+  await refreshChatData();
+}
+
+async function refreshChatData() {
+  if (!_chatId) return;
+  try {
+    const res  = await fetch(`/api/queue/${_chatId}`, { headers: authHeaders() });
+    if (!res.ok) { logMsg(`Queue fetch failed (${res.status})`, 'err'); return; }
+    const data = await res.json();
+    renderNowPlaying(data.now_playing, data.volume);
+    renderQueue(data.queue);
+  } catch (e) {
+    logMsg('Queue fetch error: ' + e.message, 'err');
+  }
+}
+
+function renderNowPlaying(np, volume) {
+  const empty = document.getElementById('np-empty');
+  const info  = document.getElementById('np-info');
+  if (!np) {
+    empty.style.display = '';
+    info.style.display  = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  info.style.display  = '';
+  document.getElementById('np-title').textContent    = np.title   || 'Unknown';
+  document.getElementById('np-artist').textContent   = np.artist  || '';
+  document.getElementById('np-duration').textContent = '⏱ ' + fmtDuration(np.duration);
+  const slider = document.getElementById('vol-slider');
+  slider.value = volume || 100;
+  updateVolLabel(slider.value);
+}
+
+function renderQueue(tracks) {
+  const empty = document.getElementById('queue-empty');
+  const list  = document.getElementById('queue-list');
+  if (!tracks || tracks.length === 0) {
+    empty.style.display = '';
+    list.style.display  = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  list.style.display  = '';
+  list.innerHTML = tracks.map((t, i) => `
+    <li>
+      <span class="q-pos">${i + 1}</span>
+      <span class="q-title" title="${t.title || ''}">${t.title || 'Unknown'}</span>
+      <span class="q-dur">${fmtDuration(t.duration)}</span>
+    </li>
+  `).join('');
+}
+
+/* ── Playback controls ──────────────────────────────────────────────── */
+async function apiAction(action) {
+  if (!_chatId) { logMsg('Load a chat first.', 'err'); return; }
+  try {
+    const res = await fetch(`/api/${action}/${_chatId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      logMsg(`${action} failed: ${data.detail}`, 'err');
+    } else {
+      logMsg(`${action} → ${JSON.stringify(data)}`, 'ok');
+      setTimeout(refreshChatData, 800);
+    }
+  } catch (e) {
+    logMsg(`${action} error: ${e.message}`, 'err');
+  }
+}
+
+async function setVolume(vol) {
+  if (!_chatId) return;
+  try {
+    const res = await fetch(`/api/volume/${_chatId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ volume: parseInt(vol) }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      logMsg(`Volume error: ${data.detail}`, 'err');
+    } else {
+      logMsg(`Volume set to ${vol}%`, 'ok');
+    }
+  } catch (e) {
+    logMsg(`Volume error: ${e.message}`, 'err');
+  }
+}
+
+function updateVolLabel(v) {
+  document.getElementById('vol-label').textContent = v + '%';
+}
+
+/* ── Master refresh ─────────────────────────────────────────────────── */
+async function refreshAll() {
+  await refreshStats();
+  await refreshChatData();
+}
+</script>
+</body>
+</html>
