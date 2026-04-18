@@ -10,7 +10,7 @@ TgCrypto==1.2.5              # C-extension: speed-up for Pyrogram encryption
 
 # ── Voice chat streaming ──────────────────────────────────────────────────────
 # py-tgcalls is the maintained PyTgCalls fork (as of 2024-2025)
-py-tgcalls==0.9.6.1
+py-tgcalls==2.2.11
 
 # ── Media extraction ──────────────────────────────────────────────────────────
 yt-dlp>=2024.3.10            # actively maintained youtube-dl fork
